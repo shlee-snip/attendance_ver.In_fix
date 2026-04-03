@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>성남특허센터 출석체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #1a3a5c;
+  --accent: #e8401a;
+  --accent2: #f0a500;
+  --bg: #f4f1eb;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #888;
+  --border: #ddd;
+  --success: #2d7d46;
+  --radius: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+.app-header { background: var(--primary); color: white; padding: 20px 24px 16px; }
+.app-header .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.badge { background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; }
+.app-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; line-height: 1; }
+.app-header .subtitle { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.back-btn { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-family: 'Noto Sans KR', sans-serif; }
+
+.content { flex: 1; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); animation: fadeUp 0.3s ease both; }
+.card-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+.datetime-display { background: var(--primary); border-radius: var(--radius); padding: 20px 24px; color: white; display: flex; justify-content: space-between; align-items: center; }
+.datetime-display .date-text { font-size: 15px; font-weight: 500; opacity: 0.85; }
+.datetime-display .time-text { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--accent2); }
+.datetime-display .round-badge { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; text-align: center; }
+
+.place-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.place-btn { background: white; border: 2px solid var(--border); border-radius: 12px; padding: 14px 10px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; transition: all 0.15s; text-align: center; line-height: 1.4; }
+.place-btn:active { transform: scale(0.97); }
+.place-btn.selected { border-color: var(--primary); background: var(--primary); color: white; }
+
+.type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.type-btn { border: none; border-radius: 14px; padding: 20px 16px; font-family: 'Noto Sans KR', sans-serif; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.type-btn:active { transform: scale(0.96); }
+.type-btn .icon { font-size: 32px; }
+.type-btn.enter { background: var(--primary); color: white; }
+.type-btn.exit { background: var(--accent); color: white; }
+
+.big-input { width: 100%; border: 2.5px solid var(--border); border-radius: 14px; padding: 18px 20px; font-family: 'Noto Sans KR', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: 8px; text-align: center; color: var(--text); outline: none; transition: border 0.2s; background: #fafafa; }
+.big-input:focus { border-color: var(--primary); background: white; }
+.name-input { width: 100%; border: 2.5px solid var(--border); border-radius: 14px; padding: 16px 20px; font-family: 'Noto Sans KR', sans-serif; font-size: 20px; font-weight: 500; text-align: center; color: var(--text); outline: none; transition: border 0.2s; background: #fafafa; margin-bottom: 12px; }
+.name-input:focus { border-color: var(--primary); background: white; }
+.input-hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+.submit-btn { width: 100%; border: none; border-radius: 14px; padding: 20px; font-family: 'Noto Sans KR', sans-serif; font-size: 20px; font-weight: 700; cursor: pointer; background: var(--primary); color: white; transition: all 0.15s; letter-spacing: 0.5px; }
+.submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+.submit-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+.success-card { background: var(--success); border-radius: var(--radius); padding: 32px 24px; color: white; text-align: center; }
+.success-icon { font-size: 56px; margin-bottom: 12px; animation: pop 0.4s ease both; }
+.success-name { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+.success-info { font-size: 15px; opacity: 0.85; line-height: 1.6; }
+.success-time { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: #90ee90; margin-top: 8px; }
+
+.error-msg { background: #fff3f0; border: 2px solid #ffccc7; border-radius: 12px; padding: 14px 18px; color: #c0392b; font-size: 14px; font-weight: 500; text-align: center; display: none; }
+.error-msg.show { display: block; }
+
+.duration-tag { font-size: 20px; padding: 8px 20px; font-weight: 700; border-radius: 12px; display: inline-block; margin-top: 4px; }
+
+.admin-login { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.12); border: none; border-radius: 50px; padding: 8px 16px; font-size: 11px; color: var(--muted); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+
+/* ── ADMIN ── */
+.admin-header { background: #0d1f2d; color: white; padding: 20px 24px; }
+.admin-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; }
+.admin-header .sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+/* 관리자 탭 네비 */
+.admin-nav { display: flex; background: #0d1f2d; border-top: 1px solid rgba(255,255,255,0.1); }
+.admin-nav button { flex: 1; background: none; border: none; color: rgba(255,255,255,0.5); padding: 12px 4px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; border-bottom: 3px solid transparent; transition: all 0.15s; }
+.admin-nav button.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+.admin-tab { display: none; }
+.admin-tab.active { display: block; }
+
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat-box { background: white; border-radius: 12px; padding: 16px 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.stat-box .num { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--primary); }
+.stat-box .label { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+/* 장소별 탭 */
+.place-tabs { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+.place-tab { flex-shrink: 0; background: white; border: 2px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; white-space: nowrap; transition: all 0.15s; }
+.place-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+.record-list { display: flex; flex-direction: column; gap: 8px; }
+.record-item { background: white; border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+.ri-name { font-size: 15px; font-weight: 700; }
+.ri-place { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ri-type { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.ri-type.enter { background: #e8f4ff; color: var(--primary); }
+.ri-type.exit { background: #fff0ee; color: var(--accent); }
+.ri-time { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.dur-tag { background: #f0faf4; color: var(--success); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 4px; display: inline-block; }
+.dur-tag.warn { background: #fff3e0; color: #e65100; }
+
+/* 수료 현황 테이블 */
+.summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.summary-table th { background: var(--primary); color: white; padding: 10px 8px; text-align: center; font-weight: 600; }
+.summary-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+.summary-table tr:hover td { background: #f9f9f9; }
+.cert-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+.cert-badge.ok { background: #e8f5e9; color: var(--success); }
+.cert-badge.no { background: #fff3e0; color: #e65100; }
+
+/* 명단 업로드 */
+.upload-area { border: 2.5px dashed var(--border); border-radius: 14px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+.upload-area:hover { border-color: var(--primary); background: #f0f4ff; }
+.upload-area .up-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-area p { font-size: 14px; color: var(--muted); }
+.upload-area strong { color: var(--primary); }
+
+.roster-table-wrap { overflow-x: auto; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 300px; }
+.roster-table th { background: var(--primary); color: white; padding: 8px; text-align: center; }
+.roster-table td { padding: 8px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+.roster-table tr.absent td { color: var(--accent); font-weight: 600; }
+
+.sheets-config { background: #fff8e1; border: 2px solid var(--accent2); border-radius: 12px; padding: 16px; font-size: 13px; line-height: 1.7; }
+.sheets-config code { background: #f0f0f0; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+.sheets-input { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13px; margin-top: 8px; font-family: 'Noto Sans KR', sans-serif; outline: none; }
+.sheets-input:focus { border-color: var(--primary); }
+.save-config-btn { background: var(--accent2); color: #1a1a1a; border: none; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; font-family: 'Noto Sans KR', sans-serif; width: 100%; }
+.status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+.status-indicator.connected { background: #e8f5e9; color: var(--success); }
+.status-indicator.disconnected { background: #fff3e0; color: #e65100; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.export-btn { background: var(--success); color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; font-family: 'Noto Sans KR', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.export-btn.secondary { background: var(--primary); margin-top: 10px; }
+
+.admin-pass-input { width: 100%; border: 2.5px solid var(--border); border-radius: 12px; padding: 16px; font-size: 18px; text-align: center; letter-spacing: 6px; font-family: 'Noto Sans KR', sans-serif; outline: none; }
+.admin-pass-input:focus { border-color: var(--primary); }
+
+.sched-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.sched-row:last-child { border-bottom: none; }
+.date-input { border: 1.5px solid #ddd; border-radius: 8px; padding: 4px 8px; font-size: 12px; outline: none; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+.info-box { background: #e8f4ff; border-left: 4px solid var(--primary); border-radius: 8px; padding: 12px 16px; font-size: 13px; line-height: 1.6; color: var(--primary); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- ===== SCREEN 1: 장소 + 입퇴장 ===== -->
+<div id="screen-step1" class="screen active">
+  <div class="app-header">
+    <div class="logo-row"><span class="badge">성남특허센터</span></div>
+    <h1>1인 1특허 갖기 운동</h1>
+    <div class="subtitle">출석 체크 시스템</div>
+  </div>
+  <div class="content">
+    <div class="datetime-display">
+      <div>
+        <div class="date-text" id="date-display">--</div>
+        <div class="time-text" id="time-display">--:--</div>
+      </div>
+      <div class="round-badge" id="round-badge">장소 선택 후<br>회차 표시</div>
+    </div>
+    <div class="card">
+      <div class="card-title">교육 장소 선택</div>
+      <div class="place-grid" id="place-grid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">구분 선택</div>
+      <div class="type-row" style="grid-template-columns:1fr">
+        <button class="type-btn enter" onclick="selectType('enter')"><span class="icon">🚪</span>출석 체크</button>
+      </div>
+    </div>
+  </div>
+  <button class="admin-login" onclick="showScreen('screen-admin-login')">관리자</button>
+</div>
+
+<!-- ===== SCREEN 2: 이름 + 뒷자리 ===== -->
+<div id="screen-step2" class="screen">
+  <div class="app-header">
+    <button class="back-btn" onclick="showScreen('screen-step1')">← 이전</button>
+    <h1 id="step2-title">출석 체크</h1>
+    <div class="subtitle" id="step2-sub">--</div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="card-title">성함을 입력하세요</div>
+      <input class="name-input" id="name-input" type="text" placeholder="홍길동" maxlength="10" autocomplete="off">
+      <div class="card-title" style="margin-top:16px">휴대폰 번호 뒷자리 4자리</div>
+      <input class="big-input" id="phone-input" type="tel" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+      <div class="input-hint">예) 010-1234-<strong>5678</strong> → 5678 입력</div>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+    <div id="roster-match-box" style="display:none" class="info-box"></div>
+    <button class="submit-btn" onclick="submitAttendance()">출석 체크 완료</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: 완료 ===== -->
+<div id="screen-step3" class="screen">
+  <div class="app-header"><h1>출석 체크 완료</h1></div>
+  <div class="content">
+    <div class="success-card">
+      <div class="success-icon" id="success-icon">✅</div>
+      <div class="success-name" id="success-name">--</div>
+      <div class="success-info" id="success-info">--</div>
+      <div class="success-time" id="success-time">--</div>
+    </div>
+    <div class="card" id="duration-card" style="display:none">
+      <div class="card-title">교육 이수 시간</div>
+      <div style="text-align:center;padding:12px 0">
+        <span class="duration-tag" id="duration-display">-- 분</span>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--muted);margin-top:8px">수료 기준: 총 8시간 이상 (회차당 1시간 이상 인정)</div>
+    </div>
+    <button class="submit-btn" onclick="resetApp()" style="background:var(--accent)">처음으로 돌아가기</button>
+  </div>
+</div>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div id="screen-admin-login" class="screen">
+  <div class="app-header" style="background:#0d1f2d">
+    <button class="back-btn" onclick="showScreen('screen-step1')">← 돌아가기</button>
+    <h1>관리자 로그인</h1>
+  </div>
+  <div class="content" style="justify-content:center">
+    <div class="card">
+      <div class="card-title">관리자 비밀번호</div>
+      <input class="admin-pass-input" id="admin-pass" type="password" inputmode="numeric" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')checkAdminPass()">
+      <div class="error-msg" id="admin-error" style="margin-top:12px">비밀번호가 올바르지 않습니다.</div>
+      <button class="submit-btn" onclick="checkAdminPass()" style="margin-top:16px">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN DASHBOARD ===== -->
+<div id="screen-admin" class="screen">
+  <div class="admin-header">
+    <button class="back-btn" onclick="showScreen('screen-step1')">← 수강생 화면</button>
+    <h2>관리자 대시보드</h2>
+    <div class="sub">성남특허센터 1인 1특허 갖기 운동</div>
+  </div>
+  <div class="admin-nav">
+    <button class="active" onclick="switchAdminTab('tab-today', this)">📊 오늘현황</button>
+    <button onclick="switchAdminTab('tab-summary', this)">🏆 수료현황</button>
+    <button onclick="switchAdminTab('tab-roster', this)">👥 수강명단</button>
+    <button onclick="switchAdminTab('tab-settings', this)">⚙️ 설정</button>
+  </div>
+
+  <div class="content">
+
+    <!-- 탭1: 오늘 현황 -->
+    <div id="tab-today" class="admin-tab active">
+      <div class="stats-row" style="margin-bottom:16px">
+        <div class="stat-box"><div class="num" id="stat-total">0</div><div class="label">전체 기록</div></div>
+        <div class="stat-box"><div class="num" id="stat-enter">0</div><div class="label">출석</div></div>
+        <div class="stat-box"><div class="num" id="stat-exit">0</div><div class="label">미출석(명단 기준)</div></div>
+      </div>
+      <div class="place-tabs" id="today-place-tabs">
+        <button class="place-tab active" onclick="filterToday('all',this)">전체</button>
+      </div>
+      <div style="height:12px"></div>
+      <div class="record-list" id="record-list"></div>
+      <button class="export-btn" onclick="exportCSV('today')" style="margin-top:8px">📥 오늘 기록 CSV 내보내기</button>
+    </div>
+
+    <!-- 탭2: 수료 현황 -->
+    <div id="tab-summary" class="admin-tab">
+      <div class="place-tabs" id="summary-place-tabs">
+        <!-- JS 생성 -->
+      </div>
+      <div style="height:12px"></div>
+      <div id="summary-content"></div>
+      <button class="export-btn" onclick="exportCSV('summary')" style="margin-top:8px">📥 수료 현황 CSV 내보내기</button>
+    </div>
+
+    <!-- 탭3: 수강 명단 -->
+    <div id="tab-roster" class="admin-tab">
+      <div class="place-tabs" id="roster-place-tabs"></div>
+      <div style="height:12px"></div>
+      <div class="info-box" style="margin-bottom:16px">
+        📌 CSV 파일 형식: <strong>이름, 연락처뒷자리</strong> (헤더 없이 첫 줄부터 데이터)<br>
+        예) 홍길동,5678
+      </div>
+      <div class="upload-area" onclick="document.getElementById('csv-upload').click()">
+        <div class="up-icon">📂</div>
+        <p><strong>클릭하여 CSV 파일 업로드</strong><br>명단이 등록되면 출석 시 자동 매칭됩니다</p>
+      </div>
+      <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="uploadRoster(event)">
+      <div style="height:12px"></div>
+      <div id="roster-content"></div>
+    </div>
+
+    <!-- 탭4: 설정 -->
+    <div id="tab-settings" class="admin-tab">
+      <!-- 구글 시트 연동 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0">구글 시트 연동</div>
+          <span class="status-indicator disconnected" id="sheets-status"><span class="status-dot"></span> 미연동</span>
+        </div>
+        <div class="sheets-config">
+          <strong>⚙️ 연동 방법 (최초 1회)</strong><br>
+          1. 구글 시트 열기<br>
+          2. <code>확장 프로그램 → Apps Script</code><br>
+          3. 아래 <strong>"스크립트 복사"</strong> 버튼으로 코드 붙여넣기<br>
+          4. <code>배포 → 새 배포 → 웹 앱</code><br>
+          &nbsp;&nbsp;&nbsp;실행 계정: <strong>나</strong> / 액세스: <strong>모든 사용자</strong><br>
+          5. 생성된 URL 아래에 입력
+        </div>
+        <button onclick="copyScript()" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px;width:100%;font-family:'Noto Sans KR',sans-serif">📋 Apps Script 코드 복사</button>
+        <input class="sheets-input" id="sheets-url" type="url" placeholder="https://script.google.com/macros/s/....../exec">
+        <button class="save-config-btn" onclick="saveSheetConfig()">💾 저장 및 연결 확인</button>
+      </div>
+
+      <!-- 교육 일정 -->
+      <div class="card">
+        <div class="card-title">📅 교육 일정 (회차 자동 계산)</div>
+        <div id="schedule-list"></div>
+        <div class="info-box" style="margin-top:12px">날짜 = 1회차 시작일. 이후 교육이 진행되는 날짜마다 자동으로 회차가 올라갑니다.</div>
+      </div>
+
+      <!-- 비밀번호 변경 -->
+      <div class="card">
+        <div class="card-title">🔐 관리자 비밀번호 변경</div>
+        <input class="admin-pass-input" id="new-pass" type="password" placeholder="새 비밀번호" style="margin-bottom:10px;letter-spacing:3px">
+        <button class="submit-btn" onclick="changePass()" style="font-size:16px;padding:14px">변경</button>
+      </div>
+
+      <button class="export-btn secondary" onclick="exportCSV('all')">📥 전체 기록 CSV 내보내기</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// 설정
+// ══════════════════════════════════════
+const PLACES = [
+  "복정도서관","서현도서관","판교도서관",
+  "성남여성인력개발센터","중장년기술창업센터 - 중장년반",
+  "성남특허센터 - 청년반"
+];
+const WARN_MINUTES = 50;           // 현장 이탈 경고 기준 (50분 미만)
+const ROUND_MIN_MINUTES = 60;      // 회차 인정 기준 (1시간 이상)
+const CERT_TOTAL_MINUTES = 480;    // 수료 기준: 총 8시간(480분) 이상
+const MIN_RECHECK_MS = 60 * 60 * 1000; // 중복 스캔 방지 (1시간)
+
+let adminPassword = localStorage.getItem("admin_pw") || "6317";
+let records  = JSON.parse(localStorage.getItem("att_records_v1") || "[]");
+let rosters  = JSON.parse(localStorage.getItem("att_rosters") || "{}");
+
+// ★ 구글 시트 URL 고정 (모든 기기에서 동일하게 작동)
+const SHEETS_URL_FIXED = "https://script.google.com/macros/s/AKfycbxsus49ASO4Cw55MNdh_SFOLd2LXl75CCZ7lQzy5LTLdWWWcwszOuzHr-1RazFwYmv3/exec";
+
+// ★ 장소별 1회차 교육 시작일 고정
+const SCHEDULE_FIXED = {
+  "복정도서관":                   { start: "2026-04-06", interval: 7 },
+  "서현도서관":                   { start: "2026-04-08", interval: 7 },
+  "판교도서관":                   { start: "2026-04-07", interval: 7 },
+  "성남여성인력개발센터":         { start: "2026-04-08", interval: 7 },
+  "중장년기술창업센터 - 중장년반": { start: "2026-04-14", interval: 7 },
+  "성남특허센터 - 청년반":        { start: "2026-04-14", interval: 7 },
+};
+
+let schedule = SCHEDULE_FIXED; // localStorage 대신 고정값 사용
+let sheetsUrl = SHEETS_URL_FIXED; // localStorage 대신 고정값 사용
+let selectedPlace = null, selectedType = null;
+let currentSummaryPlace = PLACES[0];
+let currentRosterPlace  = PLACES[0];
+let currentTodayFilter  = "all";
+
+// ══════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════
+function init() {
+  // 고정된 일정값 사용 (localStorage 무시)
+  buildPlaceGrid();
+  buildAdminTabs();
+  buildScheduleList();
+  // 시트 URL 고정이므로 항상 연동됨 표시
+  document.getElementById("sheets-url").value = sheetsUrl;
+  setSheetStatus(true);
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  document.getElementById("phone-input").addEventListener("input", function() {
+    if (this.value.length === 4) tryRosterMatch();
+  });
+  document.getElementById("name-input").addEventListener("input", tryRosterMatch);
+}
+
+function buildPlaceGrid() {
+  const grid = document.getElementById("place-grid");
+  PLACES.forEach(p => {
+    const btn = document.createElement("button");
+    btn.className = "place-btn"; btn.textContent = p;
+    btn.onclick = () => selectPlace(p, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function buildAdminTabs() {
+  // 오늘 현황 탭
+  const todayTabs = document.getElementById("today-place-tabs");
+  PLACES.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "place-tab"; b.textContent = p;
+    b.onclick = function(){ filterToday(p, this); };
+    todayTabs.appendChild(b);
+  });
+
+  // 수료 현황 탭
+  const sumTabs = document.getElementById("summary-place-tabs");
+  PLACES.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.className = "place-tab" + (i===0?" active":""); b.textContent = p;
+    b.onclick = function(){ switchSummaryPlace(p, this); };
+    sumTabs.appendChild(b);
+    if (i===0) renderSummary(p);
+  });
+
+  // 명단 탭
+  const rosterTabs = document.getElementById("roster-place-tabs");
+  PLACES.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.className = "place-tab" + (i===0?" active":""); b.textContent = p;
+    b.onclick = function(){ switchRosterPlace(p, this); };
+    rosterTabs.appendChild(b);
+    if (i===0) renderRoster(p);
+  });
+}
+
+function buildScheduleList() {
+  const list = document.getElementById("schedule-list");
+  list.innerHTML = "";
+  PLACES.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "sched-row";
+    row.innerHTML = `
+      <span style="font-weight:600">${p}</span>
+      <input type="date" class="date-input" value="${schedule[p]?.start||''}"
+        onchange="updateSchedule('${p}', this.value)">
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════
+// 시계 & 회차
+// ══════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const days = ["일","월","화","수","목","금","토"];
+  document.getElementById("date-display").textContent =
+    `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+  document.getElementById("time-display").textContent =
+    `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  if (selectedPlace) {
+    const r = getRound(selectedPlace, now);
+    document.getElementById("round-badge").textContent = `${r}회차`;
+  }
+}
+
+function getRound(place, date) {
+  const s = schedule[place];
+  if (!s || !s.start) return "?";
+  const start = new Date(s.start);
+  if (date < start) return "예정";
+
+  const toDateNum = d => {
+    const t = new Date(d);
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  };
+
+  const todayNum = toDateNum(date);
+  const startNum = toDateNum(start);
+
+  // 기존 출석 기록에서 날짜 숫자 목록 추출
+  const pastNums = [...new Set(
+    records
+      .filter(r => r.place === place)
+      .map(r => toDateNum(r.timestamp))
+  )];
+
+  // 시작일 포함
+  if (!pastNums.includes(startNum)) pastNums.push(startNum);
+  // 오늘 포함
+  if (!pastNums.includes(todayNum)) pastNums.push(todayNum);
+
+  // 숫자 기준 정렬
+  pastNums.sort((a, b) => a - b);
+
+  const round = pastNums.indexOf(todayNum) + 1;
+  return Math.min(round, 6);
+}
+
+// ══════════════════════════════════════
+// 수강생 화면
+// ══════════════════════════════════════
+function selectPlace(place, btn) {
+  selectedPlace = place;
+  document.querySelectorAll(".place-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  const r = getRound(place, new Date());
+  document.getElementById("round-badge").textContent = `${r}회차`;
+}
+
+function selectType(type) {
+  if (!selectedPlace) { alert("먼저 교육 장소를 선택해주세요."); return; }
+  selectedType = type;
+  const r = getRound(selectedPlace, new Date());
+  document.getElementById("step2-title").textContent = type==="enter" ? "입장 확인" : "퇴장 확인";
+  document.getElementById("step2-sub").textContent = `${selectedPlace} · ${r}회차`;
+  document.getElementById("name-input").value = "";
+  document.getElementById("phone-input").value = "";
+  document.getElementById("error-msg").classList.remove("show");
+  document.getElementById("roster-match-box").style.display = "none";
+  showScreen("screen-step2");
+  setTimeout(() => document.getElementById("name-input").focus(), 300);
+}
+
+function tryRosterMatch() {
+  const name  = document.getElementById("name-input").value.trim();
+  const phone = document.getElementById("phone-input").value.trim();
+  const box   = document.getElementById("roster-match-box");
+  const list  = rosters[selectedPlace] || [];
+  if (!list.length || !name || phone.length < 4) { box.style.display="none"; return; }
+  const match = list.find(r => r.name===name && r.phone===phone);
+  if (match) {
+    box.style.display = "block";
+    box.innerHTML = `✅ <strong>${match.name}</strong> 님 명단 확인 완료`;
+    box.style.background = "#e8f5e9"; box.style.borderColor = "#2d7d46"; box.style.color = "#2d7d46";
+  } else if (phone.length===4 && name.length>=2) {
+    box.style.display = "block";
+    box.innerHTML = `⚠️ 명단에서 찾을 수 없습니다. 담당자에게 문의해주세요.`;
+    box.style.background = "#fff3e0"; box.style.borderColor = "#e65100"; box.style.color = "#e65100";
+  } else {
+    box.style.display = "none";
+  }
+}
+
+async function submitAttendance() {
+  const name  = document.getElementById("name-input").value.trim();
+  const phone = document.getElementById("phone-input").value.trim();
+  const errEl = document.getElementById("error-msg");
+  errEl.classList.remove("show");
+
+  if (!name || name.length < 2) {
+    errEl.textContent = "성함을 올바르게 입력해주세요 (2자 이상)";
+    errEl.classList.add("show"); return;
+  }
+  if (!/^\d{4}$/.test(phone)) {
+    errEl.textContent = "휴대폰 뒷자리 4자리를 입력해주세요.";
+    errEl.classList.add("show"); return;
+  }
+
+  const now = new Date();
+  const key = `${name}-${phone}`;
+  const round = getRound(selectedPlace, now);
+
+  if (selectedType === "enter") {
+    const recent = records.find(r =>
+      r.nameKey===key && r.place===selectedPlace && r.round==round && r.type==="enter" &&
+      (now - new Date(r.timestamp)) < MIN_RECHECK_MS
+    );
+    if (recent) {
+      errEl.textContent = "이미 출석 체크가 완료되었습니다.";
+      errEl.classList.add("show"); return;
+    }
+  }
+
+  const rec = {
+    id: Date.now(), name, phone, nameKey: key,
+    place: selectedPlace, round, type: "enter",
+    timestamp: now.toISOString(), dateStr: fmtDT(now),
+  };
+
+  records.push(rec);
+  localStorage.setItem("att_records_v1", JSON.stringify(records));
+  if (sheetsUrl) sendToSheet(rec);
+
+  // 완료 화면
+  document.getElementById("success-icon").textContent = "✅";
+  document.getElementById("success-name").textContent = `${name} 님`;
+  document.getElementById("success-info").textContent =
+    `${selectedPlace} · ${round}회차 · 출석 완료`;
+  document.getElementById("success-time").textContent = fmtDT(now);
+  document.getElementById("duration-card").style.display = "none";
+
+  showScreen("screen-step3");
+}
+
+// ══════════════════════════════════════
+// 관리자
+// ══════════════════════════════════════
+function checkAdminPass() {
+  const val = document.getElementById("admin-pass").value;
+  if (val === adminPassword) {
+    document.getElementById("admin-error").classList.remove("show");
+    document.getElementById("admin-pass").value = "";
+    showScreen("screen-admin");
+    renderTodayStats();
+  } else {
+    document.getElementById("admin-error").classList.add("show");
+  }
+}
+
+function switchAdminTab(id, btn) {
+  document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".admin-nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  btn.classList.add("active");
+  if (id==="tab-today") renderTodayStats();
+  if (id==="tab-summary") renderSummary(currentSummaryPlace);
+  if (id==="tab-roster") renderRoster(currentRosterPlace);
+}
+
+// ── 오늘 현황 ──
+function renderTodayStats() {
+  const today = new Date().toDateString();
+  const todayRecs = records.filter(r => new Date(r.timestamp).toDateString()===today);
+  const attendedKeys = new Set(todayRecs.map(r=>r.nameKey));
+  // 명단 기준 미출석 계산 (명단이 없으면 0)
+  let absentCount = 0;
+  if (currentTodayFilter !== "all") {
+    const rosterList = rosters[currentTodayFilter] || [];
+    absentCount = rosterList.filter(p => !attendedKeys.has(`${p.name}-${p.phone}`)).length;
+  }
+  document.getElementById("stat-total").textContent = todayRecs.length;
+  document.getElementById("stat-enter").textContent = todayRecs.length;
+  document.getElementById("stat-exit").textContent = absentCount;
+  renderTodayList(currentTodayFilter);
+}
+
+function filterToday(val, btn) {
+  currentTodayFilter = val;
+  document.querySelectorAll("#today-place-tabs .place-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderTodayList(val);
+}
+
+function renderTodayList(filter) {
+  const today = new Date().toDateString();
+  let recs = records.filter(r => new Date(r.timestamp).toDateString()===today);
+  if (filter !== "all") recs = recs.filter(r=>r.place===filter);
+  const list = document.getElementById("record-list");
+  if (!recs.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>기록이 없습니다</p></div>`;
+    return;
+  }
+  list.innerHTML = [...recs].reverse().map(r => {
+    const dur = r.durationMin != null
+      ? `<div class="dur-tag ${r.durationMin>=WARN_MINUTES?'':'warn'}">${r.durationMin}분 ${r.durationMin>=WARN_MINUTES?'✓':'⚠'}</div>`
+      : "";
+    return `<div class="record-item">
+      <div>
+        <div class="ri-name">${r.name} (${r.phone})</div>
+        <div class="ri-place">${r.place} · ${r.round}회차</div>${dur}
+      </div>
+      <div style="text-align:right">
+        <span class="ri-type ${r.type}">${r.type==="enter"?"입장":"퇴장"}</span>
+        <div class="ri-time">${r.dateStr.split(" ")[1]||r.dateStr}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── 수료 현황 ──
+function switchSummaryPlace(place, btn) {
+  currentSummaryPlace = place;
+  document.querySelectorAll("#summary-place-tabs .place-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderSummary(place);
+}
+
+function renderSummary(place) {
+  const placeRecs = records.filter(r=>r.place===place);
+  // 수강생별 집계
+  const people = {};
+  placeRecs.forEach(r => {
+    if (!people[r.nameKey]) people[r.nameKey] = { name:r.name, phone:r.phone, rounds:{} };
+    if (!people[r.nameKey].rounds[r.round]) people[r.nameKey].rounds[r.round] = { enter:null, exit:null, dur:null };
+    if (r.type==="enter") people[r.nameKey].rounds[r.round].enter = r.timestamp;
+    if (r.type==="exit")  { people[r.nameKey].rounds[r.round].exit = r.timestamp; people[r.nameKey].rounds[r.round].dur = r.durationMin||null; }
+  });
+
+  // 명단에 있는 사람도 포함
+  const rosterList = rosters[place] || [];
+  rosterList.forEach(p => {
+    const k = `${p.name}-${p.phone}`;
+    if (!people[k]) people[k] = { name:p.name, phone:p.phone, rounds:{} };
+  });
+
+  const el = document.getElementById("summary-content");
+  if (!Object.keys(people).length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>수강생 데이터가 없습니다</p></div>`;
+    return;
+  }
+
+  const rows = Object.values(people).map(p => {
+    let totalMin = 0;
+    const cells = [1,2,3,4,5,6].map(rn => {
+      const rd = p.rounds[rn];
+      if (!rd || !rd.enter) return `<td style="color:#ccc">-</td>`;
+      return `<td><span class="cert-badge ok">✓ 출석</span></td>`;
+    }).join("");
+    const attendCount = [1,2,3,4,5,6].filter(rn => p.rounds[rn]?.enter).length;
+    const cert = attendCount >= 4; // 6회 중 4회 이상 출석 시 수료
+    return `<tr>
+      <td style="font-weight:700;text-align:left">${p.name}</td>
+      <td style="color:var(--muted)">${p.phone}</td>
+      ${cells}
+      <td>${attendCount}/6회</td>
+      <td><span class="cert-badge ${cert?'ok':'no'}">${cert?"수료":"미수료"}</span></td>
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `<div class="roster-table-wrap"><table class="summary-table">
+    <thead><tr><th>이름</th><th>뒷자리</th><th>1회</th><th>2회</th><th>3회</th><th>4회</th><th>5회</th><th>6회</th><th>출석횟수</th><th>수료</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+  <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7">
+    🏆 수료 기준: 6회 중 4회 이상 출석
+  </div>`;
+}
+
+// ── 수강 명단 ──
+function switchRosterPlace(place, btn) {
+  currentRosterPlace = place;
+  document.querySelectorAll("#roster-place-tabs .place-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderRoster(place);
+}
+
+function uploadRoster(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split("\n").filter(l=>l.trim());
+    const list = [];
+    lines.forEach(line => {
+      const parts = line.split(",").map(s=>s.trim().replace(/"/g,""));
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        list.push({ name: parts[0], phone: parts[1].slice(-4) });
+      }
+    });
+    if (!list.length) { alert("파일 형식을 확인해주세요."); return; }
+    rosters[currentRosterPlace] = list;
+    localStorage.setItem("att_rosters", JSON.stringify(rosters));
+    alert(`✅ ${currentRosterPlace} 명단 ${list.length}명 등록 완료`);
+    renderRoster(currentRosterPlace);
+  };
+  reader.readAsText(file, "UTF-8");
+  event.target.value = "";
+}
+
+function renderRoster(place) {
+  const list = rosters[place] || [];
+  const el = document.getElementById("roster-content");
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><p>${place} 명단이 없습니다<br><small>CSV 파일을 업로드해주세요</small></p></div>`;
+    return;
+  }
+  // 출석 여부 표시
+  const today = new Date().toDateString();
+  const todayKeys = new Set(records.filter(r=>r.place===place && new Date(r.timestamp).toDateString()===today).map(r=>r.nameKey));
+  el.innerHTML = `<div class="roster-table-wrap"><table class="roster-table">
+    <thead><tr><th>이름</th><th>뒷자리</th><th>오늘 출석</th></tr></thead>
+    <tbody>${list.map(p => {
+      const key = `${p.name}-${p.phone}`;
+      const attended = todayKeys.has(key);
+      return `<tr class="${attended?'':'absent'}">
+        <td style="font-weight:600">${p.name}</td>
+        <td>${p.phone}</td>
+        <td>${attended ? "✅ 출석" : "❌ 미출석"}</td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table></div>`;
+}
+
+// ── 설정 ──
+function updateSchedule(place, date) {
+  // 교육 시작일이 파일에 고정되어 있어 변경이 적용되지 않습니다.
+  alert("교육 시작일이 파일에 고정되어 있습니다.\n변경이 필요하면 파일을 수정 후 재배포해주세요.");
+}
+
+function saveSheetConfig() {
+  alert("✅ 구글 시트 URL이 파일에 고정되어 있어 별도 설정이 필요 없습니다.");
+}
+
+function setSheetStatus(connected) {
+  const el = document.getElementById("sheets-status");
+  el.className = `status-indicator ${connected?"connected":"disconnected"}`;
+  el.innerHTML = `<span class="status-dot"></span> ${connected?"연동됨":"미연동"}`;
+}
+
+function changePass() {
+  const val = document.getElementById("new-pass").value;
+  if (!val || val.length < 4) { alert("4자리 이상 입력해주세요."); return; }
+  adminPassword = val;
+  localStorage.setItem("admin_pw", val);
+  document.getElementById("new-pass").value = "";
+  alert("✅ 비밀번호가 변경되었습니다.");
+}
+
+function copyScript() {
+  const script = `function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const data = JSON.parse(e.postData.contents);
+  const place = data.place || "기타";
+
+  let sheet = ss.getSheetByName(place);
+  if (!sheet) {
+    sheet = ss.insertSheet(place);
+    sheet.appendRow(["이름","뒷자리","교육장소","회차","출석일시"]);
+    sheet.getRange(1,1,1,5).setBackground("#1a3a5c").setFontColor("white").setFontWeight("bold");
+  }
+
+  sheet.appendRow([
+    data.name, data.phone, data.place, data.round, data.dateStr
+  ]);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({status:"ok"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+  navigator.clipboard.writeText(script).then(() => {
+    alert("✅ 스크립트가 복사되었습니다!\nGoogle Apps Script에 붙여넣기 하세요.");
+  }).catch(() => {
+    prompt("아래 코드를 복사하세요:", script);
+  });
+}
+
+// ── CSV 내보내기 ──
+function exportCSV(mode) {
+  let data = [], filename = "";
+  const today = new Date().toDateString();
+
+  if (mode === "today") {
+    data = records.filter(r => new Date(r.timestamp).toDateString()===today);
+    filename = `출석기록_오늘_${fmtDate(new Date())}`;
+  } else if (mode === "all") {
+    data = records;
+    filename = `출석기록_전체_${fmtDate(new Date())}`;
+  } else if (mode === "summary") {
+    // 수료 현황 CSV
+    const place = currentSummaryPlace;
+    const placeRecs = records.filter(r=>r.place===place);
+    const people = {};
+    placeRecs.forEach(r => {
+      if (!people[r.nameKey]) people[r.nameKey] = {name:r.name, phone:r.phone, rounds:{}};
+      if (!people[r.nameKey].rounds[r.round]) people[r.nameKey].rounds[r.round] = {dur:null};
+      if (r.type==="exit") people[r.nameKey].rounds[r.round].dur = r.durationMin||0;
+    });
+    (rosters[place]||[]).forEach(p => {
+      const k=`${p.name}-${p.phone}`;
+      if (!people[k]) people[k]={name:p.name,phone:p.phone,rounds:{}};
+    });
+    const header = ["이름","뒷자리","1회차(분)","2회차(분)","3회차(분)","4회차(분)","5회차(분)","6회차(분)","총이수시간","수료여부"];
+    const rows = Object.values(people).map(p => {
+      const durs = [1,2,3,4,5,6].map(n => p.rounds[n]?.dur ?? "");
+      const total = durs.reduce((s,v) => s + Math.min(v||0, 120), 0); // 회차당 최대 120분
+      const cert = total >= CERT_TOTAL_MINUTES ? "수료" : "미수료";
+      return [p.name, p.phone, ...durs, total+"분", cert];
+    });
+    const csv = "\uFEFF" + [header,...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
+    download(csv, `수료현황_${place}_${fmtDate(new Date())}.csv`); return;
+  }
+
+  if (!data.length) { alert("내보낼 데이터가 없습니다."); return; }
+  const header = ["이름","뒷자리","교육장소","회차","구분","일시","교육시간(분)"];
+  const rows = data.map(r => [r.name,r.phone,r.place,r.round, r.type==="enter"?"입장":"퇴장", r.dateStr, r.durationMin??""]);
+  const csv = "\uFEFF" + [header,...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
+  download(csv, filename+".csv");
+}
+
+function download(csv, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download = name; a.click();
+}
+
+// ── 구글 시트 전송 ──
+async function sendToSheet(rec) {
+  try {
+    await fetch(sheetsUrl, { method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(rec) });
+  } catch(e) { console.warn("시트 전송 실패:", e); }
+}
+
+// ══════════════════════════════════════
+// 유틸
+// ══════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function resetApp() {
+  selectedPlace=null; selectedType=null;
+  document.querySelectorAll(".place-btn").forEach(b=>b.classList.remove("selected"));
+  document.getElementById("round-badge").textContent="장소 선택 후\n회차 표시";
+  showScreen("screen-step1");
+}
+function pad(n) { return String(n).padStart(2,"0"); }
+function fmtDT(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function fmtDate(d) {
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
