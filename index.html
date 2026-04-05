@@ -482,7 +482,7 @@ function updateClock() {
 function getRound(place, date) {
   const s = schedule[place];
   if (!s || !s.start) return "?";
-  const start = new Date(s.start);
+  const start = new Date(s.start + "T00:00:00");
   if (date < start) return "예정";
 
   const toDateNum = d => {
