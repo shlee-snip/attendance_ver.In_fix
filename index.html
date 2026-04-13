@@ -367,21 +367,20 @@ let adminPassword = localStorage.getItem("admin_pw") || "6317";
 let records  = JSON.parse(localStorage.getItem("att_records_v1") || "[]");
 let rosters  = JSON.parse(localStorage.getItem("att_rosters") || "{}");
 
-// ★ 구글 시트 URL 고정 (모든 기기에서 동일하게 작동)
+// ★ 구글 시트 URL 고정
 const SHEETS_URL_FIXED = "https://script.google.com/macros/s/AKfycbxsus49ASO4Cw55MNdh_SFOLd2LXl75CCZ7lQzy5LTLdWWWcwszOuzHr-1RazFwYmv3/exec";
 
-// ★ 장소별 1회차 교육 시작일 고정
+// ★ 장소별 교육 날짜 전체 고정 (불규칙 일정)
 const SCHEDULE_FIXED = {
-  "복정도서관":                   { start: "2026-04-06", interval: 7 },
-  "서현도서관":                   { start: "2026-04-08", interval: 7 },
-  "판교도서관":                   { start: "2026-04-07", interval: 7 },
-  "성남여성인력개발센터":         { start: "2026-04-08", interval: 7 },
-  "중장년기술창업센터 - 중장년반": { start: "2026-04-14", interval: 7 },
-  "성남특허센터 - 청년반":        { start: "2026-04-14", interval: 7 },
+  "복정도서관":                    ["2026-04-06","2026-04-08","2026-04-13","2026-04-15","2026-04-20","2026-04-22"],
+  "서현도서관":                    ["2026-04-08","2026-04-09","2026-04-15","2026-04-16","2026-04-22","2026-04-23"],
+  "판교도서관":                    ["2026-04-07","2026-04-09","2026-04-14","2026-04-16","2026-04-21","2026-04-23"],
+  "성남여성인력개발센터":          ["2026-04-08","2026-04-09","2026-04-10","2026-04-15","2026-04-16","2026-04-17"],
+  "중장년기술창업센터 - 중장년반": ["2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-20","2026-04-21"],
+  "성남특허센터 - 청년반":         ["2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-20","2026-04-21"],
 };
 
-let schedule = SCHEDULE_FIXED; // localStorage 대신 고정값 사용
-let sheetsUrl = SHEETS_URL_FIXED; // localStorage 대신 고정값 사용
+let sheetsUrl = SHEETS_URL_FIXED;
 let selectedPlace = null, selectedType = null;
 let currentSummaryPlace = PLACES[0];
 let currentRosterPlace  = PLACES[0];
@@ -391,11 +390,9 @@ let currentTodayFilter  = "all";
 // 초기화
 // ══════════════════════════════════════
 function init() {
-  // 고정된 일정값 사용 (localStorage 무시)
   buildPlaceGrid();
   buildAdminTabs();
   buildScheduleList();
-  // 시트 URL 고정이므로 항상 연동됨 표시
   document.getElementById("sheets-url").value = sheetsUrl;
   setSheetStatus(true);
   updateClock();
@@ -452,12 +449,15 @@ function buildScheduleList() {
   const list = document.getElementById("schedule-list");
   list.innerHTML = "";
   PLACES.forEach(p => {
+    const dates = SCHEDULE_FIXED[p] || [];
     const row = document.createElement("div");
     row.className = "sched-row";
+    row.style.flexDirection = "column";
+    row.style.alignItems = "flex-start";
+    row.style.gap = "4px";
     row.innerHTML = `
-      <span style="font-weight:600">${p}</span>
-      <input type="date" class="date-input" value="${schedule[p]?.start||''}"
-        onchange="updateSchedule('${p}', this.value)">
+      <span style="font-weight:700">${p}</span>
+      <span style="font-size:12px;color:#666">${dates.map((d,i) => `${i+1}회: ${d}`).join(' &nbsp;|&nbsp; ')}</span>
     `;
     list.appendChild(row);
   });
@@ -480,36 +480,20 @@ function updateClock() {
 }
 
 function getRound(place, date) {
-  const s = schedule[place];
-  if (!s || !s.start) return "?";
-  const start = new Date(s.start + "T00:00:00");
-  if (date < start) return "예정";
+  const dates = SCHEDULE_FIXED[place];
+  if (!dates || dates.length === 0) return "?";
 
-  const toDateNum = d => {
-    const t = new Date(d);
-    return new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
-  };
+  // 오늘 날짜를 "YYYY-MM-DD" 형식으로 변환
+  const todayStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
 
-  const todayNum = toDateNum(date);
-  const startNum = toDateNum(start);
+  // 오늘이 교육일이면 해당 회차 반환
+  const idx = dates.indexOf(todayStr);
+  if (idx !== -1) return idx + 1;
 
-  // 기존 출석 기록에서 날짜 숫자 목록 추출
-  const pastNums = [...new Set(
-    records
-      .filter(r => r.place === place)
-      .map(r => toDateNum(r.timestamp))
-  )];
-
-  // 시작일 포함
-  if (!pastNums.includes(startNum)) pastNums.push(startNum);
-  // 오늘 포함
-  if (!pastNums.includes(todayNum)) pastNums.push(todayNum);
-
-  // 숫자 기준 정렬
-  pastNums.sort((a, b) => a - b);
-
-  const round = pastNums.indexOf(todayNum) + 1;
-  return Math.min(round, 6);
+  // 오늘이 교육일이 아닌 경우: 첫 교육일 이전이면 예정, 이후면 가장 최근 회차 반환
+  if (todayStr < dates[0]) return "예정";
+  const pastDates = dates.filter(d => d < todayStr);
+  return pastDates.length;
 }
 
 // ══════════════════════════════════════
@@ -799,8 +783,7 @@ function renderRoster(place) {
 
 // ── 설정 ──
 function updateSchedule(place, date) {
-  // 교육 시작일이 파일에 고정되어 있어 변경이 적용되지 않습니다.
-  alert("교육 시작일이 파일에 고정되어 있습니다.\n변경이 필요하면 파일을 수정 후 재배포해주세요.");
+  alert("교육 날짜가 파일에 고정되어 있습니다.\n변경이 필요하면 파일을 수정 후 재배포해주세요.");
 }
 
 function saveSheetConfig() {
